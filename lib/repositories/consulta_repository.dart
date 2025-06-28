@@ -7,6 +7,9 @@ import 'package:flutter_projeto1/firestone/models/Consulta.dart';
 abstract class IConsultaRepository  {
   Future<List<Consulta>> getConsultas();
   Future<Consulta> createConsulta(String pacienteNome, String medicoNome, String anamnese, String diagnostico, String status); 
+  Future<void> deleteConsulta(String id);
+  Future<void> updateConsulta(String id, String pacienteNome, String medicoNome, String anamnese, String diagnostico, String status); 
+  
 }
 
 class ConsultaRepository implements IConsultaRepository { // CORRIGIDO: nome da classe
@@ -55,4 +58,48 @@ class ConsultaRepository implements IConsultaRepository { // CORRIGIDO: nome da 
       throw Exception('Não foi possível criar a consulta');
     }
   }
+
+  @override
+  Future<void> deleteConsulta(String id) async {
+    final response = await client.delete(
+      url: 'http://127.0.0.1:5000/consultas/$id',
+    );
+
+    if (response.statusCode == 204) {
+      return; // Consulta deletada com sucesso
+    } else if (response.statusCode == 404) {
+      throw NotFoundException("A URL informada não é válida");
+    } else {
+      throw Exception('Não foi possível deletar a consulta');
+    }
+}
+
+  @override
+    Future<Consulta> updateConsulta(String id, String pacienteNome, String medicoNome, String anamnese, String diagnostico, String status) async {
+      final response = await client.update(
+        url: 'http://127.0.0.1:5000/consultas/$id',
+        body: jsonEncode({
+        'paciente_nome': pacienteNome, 
+        'medico_nome': medicoNome, 
+        'data_consulta': DateTime.now().toIso8601String(),
+        'anamnese': anamnese,
+        'diagnostico': diagnostico,
+        'status': status
+          }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return Consulta.fromMap(data);
+      } else if (response.statusCode == 400) {
+        throw Exception(
+          'ID da lista deve ser um UUID v4 válido ou Nome é obrigatório',
+        );
+      } else if (response.statusCode == 404) {
+        throw NotFoundException('Lista não encontrada');
+      } else {
+        throw Exception('Não foi possível atualizar a lista');
+      }
+    }
+
 }

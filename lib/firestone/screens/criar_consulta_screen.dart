@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_projeto1/firestone/models/Consulta.dart';
-import 'package:flutter_projeto1/firestore_produtos/presentation/receita_screen.dart';
+import 'package:flutter_projeto1/firestone/screens/receita_screen.dart';
 import 'package:flutter_projeto1/http/http_client_lista.dart';
 import 'package:flutter_projeto1/repositories/consulta_repository.dart';
 //import 'package:uuid/uuid.dart';
@@ -81,7 +81,7 @@ class _CriarConsultaScreenState extends State<CriarConsultaScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ProdutoScreen(lista: model),
+                              builder: (context) => ReceitaScreen(consulta: model),
                             ),
                           );
                         },
@@ -228,8 +228,37 @@ class _CriarConsultaScreenState extends State<CriarConsultaScreen> {
     }
   }
 
-  void remove(Consulta model) {
+  Future<void> remove(Consulta model) async {
+    try {
+      final consultaRepository = ConsultaRepository(client: HttpClientLista());
+      await consultaRepository.deleteConsulta(model.id);
+      refresh();
+    } catch (e) {
+      print('Erro ao deletar Consulta: $e');
+    }
+  }
+
+  Future<void> updateConsulta(Consulta model) async {
+    try {
+      final consultaRepository = ConsultaRepository(client: HttpClientLista());
+      await consultaRepository.updateConsulta(
+        model.id,
+        model.pacienteNome,
+        model.medicoNome,
+        model.anamnese,
+        model.diagnostico,
+        model.status,
+      );
+      refresh();
+    } catch (e) {
+      print('Erro ao atualizar consulta: $e');
+    }
+  }
+
+}
+
+  /*void remove(Consulta model) {
     firestore.collection("consultas").doc(model.id).delete();
     refresh();
    }
-}
+}*/
