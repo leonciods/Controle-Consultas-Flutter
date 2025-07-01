@@ -210,7 +210,7 @@ class _CriarConsultaScreenState extends State<CriarConsultaScreen> {
         listConsultas = consultas;
       });
     } catch (e) {
-      print('Erro ao carregar listas: $e');
+      print('Erro ao carregar consultas: $e');
     }
 
 

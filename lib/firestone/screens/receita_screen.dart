@@ -5,7 +5,7 @@ import 'package:flutter_projeto1/firestone/models/receita.dart';
 import 'package:flutter_projeto1/firestone/models/atestado.dart';
 import 'package:flutter_projeto1/firestore_produtos/presentation/widgets/list_tile_atestado.dart';
 import 'package:flutter_projeto1/firestore_produtos/presentation/widgets/list_tile_receita.dart';
-import 'package:uuid/uuid.dart';
+import 'package:flutter_projeto1/repositories/atestado_repository.dart';
 import 'package:flutter_projeto1/http/http_client_lista.dart';
 import 'package:flutter_projeto1/repositories/receita_repository.dart';
 
@@ -22,6 +22,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
   List<Atestado> listaAtestados = [];
 
   late final ReceitaRepository receitaRepository;
+  late final AtestadoRepository atestadoRepository;
 
   FirebaseFirestore firestore = FirebaseFirestore.instance;
 
@@ -29,6 +30,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
   void initState() {
     super.initState();
     receitaRepository = ReceitaRepository(client: HttpClientLista());
+    atestadoRepository = AtestadoRepository(client: HttpClientLista());
     refresh();
   }
 
@@ -241,7 +243,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                           widget.consulta.id,
                           medicamentoController.text.trim(),
                           dosagemController.text.trim(),
-                          widget.consulta.pacienteNome, // ADICIONAR ESTE PARÂMETRO
+                          widget.consulta.pacienteNome, 
                           duracaoController.text.trim().isEmpty ? null : duracaoController.text.trim(),
                           observacoesController.text.trim().isEmpty ? null : observacoesController.text.trim(),
                         );
@@ -252,7 +254,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                             model.id,
                             medicamentoController.text.trim(),
                             dosagemController.text.trim(),
-                            widget.consulta.pacienteNome, // ADICIONAR ESTE PARÂMETRO
+                            widget.consulta.pacienteNome, 
                             duracaoController.text.trim().isEmpty ? null : duracaoController.text.trim(),
                             observacoesController.text.trim().isEmpty ? null : observacoesController.text.trim(),
                           );
@@ -347,7 +349,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
     }
   }
 
-  // Métodos para Atestados (MANTIDOS COMO FIRESTORE)
+  // Métodos para Atestados 
   showAtestadoModal({Atestado? model}) {
     String labelTitle = "Criar Atestado";
     String labelConfirmationButton = "Salvar";
@@ -448,7 +450,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (cidController.text.trim().isEmpty ||
                           diasController.text.trim().isEmpty ||
                           dataInicioController.text.trim().isEmpty) {
@@ -474,26 +476,58 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
 
                       String dataFim = Atestado.calcularDataFim(dataInicioController.text.trim(), diasAfastamento);
 
-                      Atestado atestado = Atestado(
-                        id: model?.id ?? const Uuid().v4(),
-                        pacienteNome: widget.consulta.pacienteNome,
-                        cid: cidController.text.trim().toUpperCase(),
-                        diasAfastamento: diasAfastamento,
-                        dataInicio: dataInicioController.text.trim(),
-                        dataFim: dataFim,
-                        dataEmissao: DateTime.now().toIso8601String(),
-                        observacoes: observacoesController.text.trim().isEmpty 
-                            ? null 
-                            : observacoesController.text.trim(),
-                      );
+                      try {
+                        if (model == null) {
 
-                      firestore
-                          .collection("consultas")
-                          .doc(widget.consulta.id)
-                          .collection("atestados")
-                          .doc(atestado.id)
-                          .set(atestado.toMap())
-                          .then((_) {
+                          String? pacienteNome = widget.consulta.pacienteNome;
+                          // CRIAR NOVA ATESTADO VIA API
+                          await atestadoRepository.createAtestado(
+                            widget.consulta.id,                          
+                            cidController.text.trim().toUpperCase(),
+                            diasAfastamento,
+                            dataInicioController.text.trim(),
+                            dataFim,                          
+                            observacoesController.text.trim().isEmpty 
+                                ? null 
+                                : observacoesController.text.trim(),
+                            pacienteNome, // Novo parâmetro adicionado                       
+                          );
+                        
+                        } else {
+                        await atestadoRepository.updateAtestado(
+                          widget.consulta.id,
+                          model.id,
+                          cidController.text.trim().toUpperCase(),
+                          diasAfastamento,
+                          dataInicioController.text.trim(),
+                          dataFim,
+                          observacoesController.text.trim().isEmpty 
+                              ? null 
+                              : observacoesController.text.trim(),
+                          widget.consulta.pacienteNome, // Novo parâmetro adicionado
+                        );
+                                            }
+
+                      // Atestado atestado = Atestado(
+                      //   id: model?.id ?? const Uuid().v4(),
+                      //   pacienteNome: widget.consulta.pacienteNome,
+                      //   cid: cidController.text.trim().toUpperCase(),
+                      //   diasAfastamento: diasAfastamento,
+                      //   dataInicio: dataInicioController.text.trim(),
+                      //   dataFim: dataFim,
+                      //   dataEmissao: DateTime.now().toIso8601String(),
+                      //   observacoes: observacoesController.text.trim().isEmpty 
+                      //       ? null 
+                      //       : observacoesController.text.trim(),
+                      // );
+
+                      // firestore
+                      //     .collection("consultas")
+                      //     .doc(widget.consulta.id)
+                      //     .collection("atestados")
+                      //     .doc(atestado.id)
+                      //     .set(atestado.toMap())
+                      //     .then((_) {
                         refresh();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -504,17 +538,17 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                           ),
                         );
                         Navigator.pop(context);
-                      }).catchError((error) {
+                      } catch (error) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Erro ao salvar atestado: $error'),
                             backgroundColor: Colors.red,
                           ),
                         );
-                      });
+                      }
                     },
                     child: Text(labelConfirmationButton),
-                  ),
+                   ),
                 ],
               ),
             ],
@@ -528,19 +562,17 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
     List<Atestado> temp = [];
 
     try {
-      QuerySnapshot<Map<String, dynamic>> snapshot = await firestore
-          .collection("consultas")
-          .doc(widget.consulta.id)
-          .collection("atestados")
-          .orderBy("data_emissao", descending: true)
-          .get();
+      temp = await atestadoRepository.getAtestados(widget.consulta.id);
 
-      for (var doc in snapshot.docs) {
-        Atestado atestado = Atestado.fromMap(doc.data());
-        temp.add(atestado);
-      }
+    
     } catch (e) {
       print('Erro ao buscar atestados: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao carregar atestados: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
 
     return temp;
@@ -548,12 +580,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
 
   deleteAtestado(Atestado atestado) async {
     try {
-      await firestore
-          .collection("consultas")
-          .doc(widget.consulta.id)
-          .collection("atestados")
-          .doc(atestado.id)
-          .delete();
+      await atestadoRepository.deleteAtestado(widget.consulta.id, atestado.id);
 
       refresh();
 
