@@ -1,16 +1,39 @@
-# flutter_projeto1
+# Sistema UPA - Módulo Médico
 
-A new Flutter project.
+**Trabalho da disciplina Programação para Dispositivos Móveis - IFRS**
 
-## Getting Started
+## Sobre o Projeto
 
-This project is a starting point for a Flutter application.
+Aplicativo mobile desenvolvido em Flutter que simula o sistema usado por médicos em uma UPA (Unidade de Pronto Atendimento). O app permite gerenciar consultas, criar receitas e atestados médicos digitais.
 
-A few resources to get you started if this is your first Flutter project:
+## Funcionalidades
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Visualizar lista de consultas
+- Ver detalhes de cada consulta
+- CRUD de receitas médicas
+- Campos da receita: medicamento, dosagem, duração e observações
+- CRUD de atestados médicos
+- Campos do atestado: CID, dias de afastamento, data de início e observações
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Tecnologias
+
+- **Frontend:** Flutter (Dart)
+- **Backend:** Python + Flask - https://github.com/leonciods/Controle-consultas
+- **Banco:** Google Firestore
+- **API:** REST
+
+## Como Executar
+
+### Backend
+```bash
+pip install flask flask-cors google-cloud-firestore
+python app.py
+```
+
+### App Mobile
+```bash
+flutter pub get
+flutter run
+```
+
+*Projeto desenvolvido para IFRS - 2025*
