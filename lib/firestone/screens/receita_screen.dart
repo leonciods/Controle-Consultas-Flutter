@@ -6,7 +6,8 @@ import 'package:flutter_projeto1/firestone/models/atestado.dart';
 import 'package:flutter_projeto1/firestore_produtos/presentation/widgets/list_tile_atestado.dart';
 import 'package:flutter_projeto1/firestore_produtos/presentation/widgets/list_tile_receita.dart';
 import 'package:uuid/uuid.dart';
-
+import 'package:flutter_projeto1/http/http_client_lista.dart';
+import 'package:flutter_projeto1/repositories/receita_repository.dart';
 
 class ReceitaScreen extends StatefulWidget {
   final Consulta consulta;
@@ -20,11 +21,14 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
   List<Receita> listaReceitas = [];
   List<Atestado> listaAtestados = [];
 
+  late final ReceitaRepository receitaRepository;
+
   FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
     super.initState();
+    receitaRepository = ReceitaRepository(client: HttpClientLista());
     refresh();
   }
 
@@ -217,7 +221,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       // Validação básica
                       if (medicamentoController.text.trim().isEmpty ||
                           dosagemController.text.trim().isEmpty) {
@@ -230,29 +234,30 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                         return;
                       }
 
-                      // Criar um objeto Receita com as infos
-                      Receita receita = Receita(
-                        id: model?.id ?? const Uuid().v4(),
-                        medicamento: medicamentoController.text.trim(),
-                        dosagem: dosagemController.text.trim(),
-                        pacienteNome: widget.consulta.pacienteNome,
-                        dataEmissao: DateTime.now().toIso8601String(),
-                        observacoes: observacoesController.text.trim().isEmpty 
-                            ? null 
-                            : observacoesController.text.trim(),
-                        duracao: duracaoController.text.trim().isEmpty 
-                            ? null 
-                            : duracaoController.text.trim(),
-                      );
+                      try {
+                        if (model == null) {
+                          // CRIAR NOVA RECEITA VIA API
+                          await receitaRepository.createReceita(
+                          widget.consulta.id,
+                          medicamentoController.text.trim(),
+                          dosagemController.text.trim(),
+                          widget.consulta.pacienteNome, // ADICIONAR ESTE PARÂMETRO
+                          duracaoController.text.trim().isEmpty ? null : duracaoController.text.trim(),
+                          observacoesController.text.trim().isEmpty ? null : observacoesController.text.trim(),
+                        );
+                        } else {
+                          // ATUALIZAR RECEITA EXISTENTE VIA API
+                            await receitaRepository.updateReceita(
+                            widget.consulta.id,
+                            model.id,
+                            medicamentoController.text.trim(),
+                            dosagemController.text.trim(),
+                            widget.consulta.pacienteNome, // ADICIONAR ESTE PARÂMETRO
+                            duracaoController.text.trim().isEmpty ? null : duracaoController.text.trim(),
+                            observacoesController.text.trim().isEmpty ? null : observacoesController.text.trim(),
+                          );
+                        }
 
-                      // Salvar no Firestore
-                      firestore
-                          .collection("consultas")
-                          .doc(widget.consulta.id)
-                          .collection("receitas")
-                          .doc(receita.id)
-                          .set(receita.toMap())
-                          .then((_) {
                         // Atualizar a lista
                         refresh();
                         
@@ -268,7 +273,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                         
                         // Fechar o Modal
                         Navigator.pop(context);
-                      }).catchError((error) {
+                      } catch (error) {
                         // Mostrar erro
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -276,7 +281,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                             backgroundColor: Colors.red,
                           ),
                         );
-                      });
+                      }
                     },
                     child: Text(labelConfirmationButton),
                   ),
@@ -303,17 +308,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
     List<Receita> temp = [];
 
     try {
-      QuerySnapshot<Map<String, dynamic>> snapshot = await firestore
-          .collection("consultas")
-          .doc(widget.consulta.id)
-          .collection("receitas")
-          .orderBy("data_emissao", descending: true)
-          .get();
-
-      for (var doc in snapshot.docs) {
-        Receita receita = Receita.fromMap(doc.data());
-        temp.add(receita);
-      }
+      temp = await receitaRepository.getReceitas(widget.consulta.id);
     } catch (e) {
       print('Erro ao buscar receitas: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -329,12 +324,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
 
   deleteReceita(Receita receita) async {
     try {
-      await firestore
-          .collection("consultas")
-          .doc(widget.consulta.id)
-          .collection("receitas")
-          .doc(receita.id)
-          .delete();
+      await receitaRepository.deleteReceita(widget.consulta.id, receita.id);
 
       // Atualizar a lista
       refresh();
@@ -357,7 +347,7 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
     }
   }
 
-  // Métodos para Atestados
+  // Métodos para Atestados (MANTIDOS COMO FIRESTORE)
   showAtestadoModal({Atestado? model}) {
     String labelTitle = "Criar Atestado";
     String labelConfirmationButton = "Salvar";

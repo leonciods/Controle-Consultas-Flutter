@@ -3,7 +3,7 @@ import 'package:flutter_projeto1/firestone/screens/criar_consulta_screen.dart';
 
 class HomeScreen extends StatelessWidget {
 
-  Widget _selectedCleaning(@required Color color, @required String title) {
+  Widget _selectedCleaning(Color color, String title) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10.0),
       padding: EdgeInsets.only(left: 20,),
@@ -30,7 +30,7 @@ class HomeScreen extends StatelessWidget {
     );    
   }
 
-  Widget _seletedExtras(@required String image, @required String name, {VoidCallback? onTap}) {
+  Widget _seletedExtras(String image, String name, {VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
